@@ -3,3 +3,15 @@ __pycache__/
 *.pyc
 .venv/
 *.tmp
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+npm-debug.log*
+storage/ideas/*
+storage/plans/*
+storage/logs/*
+!storage/ideas/.gitkeep
+!storage/plans/.gitkeep
+!storage/logs/.gitkeep
