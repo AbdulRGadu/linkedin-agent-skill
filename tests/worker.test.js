@@ -96,3 +96,28 @@ test('Worker-native MCP lists six tools and refuses approved write when toggle o
   const result = await rpc('tools/call', { name: 'linkedin_publish_text_post', arguments: { text: 'Test draft', approved: true } });
   assert.equal(result.result.isError, true); assert.ok(!JSON.stringify(result).includes('mock-private-token'));
 });
+
+test('callback explains allowlisted errors without reflecting upstream data or exchanging tokens', async () => {
+  for (const error of ['unauthorized_scope_error', 'invalid_redirect_uri', 'user_cancelled_authorize', '<script>private-value</script>']) {
+    let calls = 0;
+    const oauth = { finishUpstream: async () => ({ data: { owner: true } }) };
+    const query = new URLSearchParams({ error, error_description: 'private-description', code: 'private-code', state: 'private-state' });
+    const response = await defaultHandler(request('/oauth/linkedin/callback?' + query), { ...env, OAUTH_PROVIDER: oauth }, {}, async () => { calls++; });
+    const body = await response.text();
+    assert.equal(response.status, 400); assert.equal(calls, 0);
+    for (const secret of ['private-description', 'private-code', 'private-state', 'private-value']) assert.ok(!body.includes(secret));
+    if (!error.startsWith('<')) assert.ok(body.includes(error));
+  }
+});
+test('successful callback namespaces member identity safely for the OAuth provider', async () => {
+  let completed;
+  const oauth = {
+    finishUpstream: async () => ({ data: { owner: true }, request: { scope: ['linkedin:actions'] }, headers: new Headers() }),
+    completeAuthorization: async options => { completed = options; return { redirectTo: 'https://client.example/callback?code=mock-mcp-code' }; },
+  };
+  const response = await defaultHandler(request('/oauth/linkedin/callback?code=mock-code'), { ...env, OAUTH_PROVIDER: oauth }, {}, async url => Response.json(url.includes('accessToken') ? { access_token: 'mock-member-token', expires_in: 3600 } : { sub: 'member123' }));
+  assert.equal(response.status, 302);
+  assert.equal(completed.userId, 'urn%3Ali%3Aperson%3Amember123');
+  assert.equal(completed.props.personUrn, 'urn:li:person:member123');
+  assert.equal(response.headers.get('location'), 'https://client.example/callback?code=mock-mcp-code');
+});

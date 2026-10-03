@@ -40,6 +40,14 @@ test('workerd OAuth discovery, registration, consent and protected MCP smoke', a
   assert.equal(upstream.pathname, '/oauth/v2/authorization');
   assert.equal(upstream.searchParams.get('redirect_uri'), origin + '/oauth/linkedin/callback');
   assert.ok(upstream.searchParams.get('state'));
+  const upstreamCookie = approved.headers.getSetCookie().map(value => value.split(';')[0]).join('; ');
+  const refusedUrl = new URL(origin + '/oauth/linkedin/callback');
+  refusedUrl.search = new URLSearchParams({ state: upstream.searchParams.get('state'), error: 'unauthorized_scope_error', error_description: 'private-value-must-not-appear' }).toString();
+  const refused = await mf.dispatchFetch(refusedUrl.toString(), { headers: { Cookie: upstreamCookie } });
+  assert.equal(refused.status, 400);
+  const refusalText = await refused.text();
+  assert.ok(refusalText.includes('unauthorized_scope_error'));
+  assert.ok(!refusalText.includes('private-value-must-not-appear'));
   const callback = await mf.dispatchFetch(origin + '/oauth/linkedin/callback?code=mock&state=wrong');
   assert.equal(callback.status, 400);
 });

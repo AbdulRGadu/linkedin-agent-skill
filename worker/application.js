@@ -80,9 +80,28 @@ export async function defaultHandler(request, env, ctx, fetchImpl = fetch) {
     if (url.pathname === '/oauth/linkedin/callback' && request.method === 'GET') {
       // Library consumes encrypted state and validates its browser-bound cookie.
       const upstream = await oauth.finishUpstream(request);
-      if (upstream.data?.owner !== true || url.searchParams.has('error')) return page('Authorization declined', '<p>Restart from your MCP client when ready.</p>', 400);
+      if (upstream.data?.owner !== true) return page('Authorization session invalid', '<p>Restart authorization from your MCP client in the same browser.</p>', 400);
+      if (url.searchParams.has('error')) {
+        // Display only fixed explanations. Upstream descriptions can contain
+        // credentials or attacker-controlled text and must never be reflected.
+        const reasons = new Map([
+          ['user_cancelled_login', 'LinkedIn sign-in was cancelled. Restart and complete sign-in.'],
+          ['user_cancelled_authorize', 'LinkedIn permission approval was cancelled. Restart and approve the requested permissions.'],
+          ['access_denied', 'LinkedIn denied permission. Restart and approve consent; if it persists, check the app products and account access.'],
+          ['unauthorized_scope_error', 'LinkedIn has not granted a requested scope. In your app Auth tab, verify openid, profile and w_member_social are listed. Enable Sign In with LinkedIn using OpenID Connect and Share on LinkedIn, then restart authorization.'],
+          ['invalid_scope', 'LinkedIn rejected the requested scopes. Verify openid, profile and w_member_social are listed in the app Auth tab, then restart authorization.'],
+          ['invalid_redirect_uri', 'LinkedIn rejected the callback URL. Add the exact authorized redirect URL shown below, then restart authorization.'],
+          ['invalid_request', 'LinkedIn rejected the authorization request. Check the app client ID, enabled products and exact redirect URL, then restart authorization.'],
+          ['unauthorized_client', 'LinkedIn has not authorized this app for this flow. Check the app products and client ID, then restart authorization.'],
+          ['server_error', 'LinkedIn encountered a server error. Restart authorization later.'],
+          ['temporarily_unavailable', 'LinkedIn authorization is temporarily unavailable. Restart authorization later.'],
+        ]);
+        const error = url.searchParams.get('error');
+        const reason = reasons.get(error) || 'LinkedIn returned an unrecognized authorization error. Check the app products and redirect URL, then restart authorization.';
+        return page('LinkedIn authorization refused', '<p>' + reason + '</p>' + (reasons.has(error) ? '<p>Error: <code>' + escape(error) + '</code></p>' : '') + '<p>Required redirect URL: <code>' + escape(env.PUBLIC_ORIGIN) + '/oauth/linkedin/callback</code></p>', 400);
+      }
       const props = await exchangeLinkedInCode(url.searchParams.get('code'), env, fetchImpl);
-      const completed = await oauth.completeAuthorization({ request: upstream.request, userId: props.personUrn, metadata: { label: 'Gadu Abdul LinkedIn' }, scope: upstream.request.scope, props });
+      const completed = await oauth.completeAuthorization({ request: upstream.request, userId: encodeURIComponent(props.personUrn), metadata: { label: 'Gadu Abdul LinkedIn' }, scope: upstream.request.scope, props });
       upstream.headers.set('Location', completed.redirectTo);
       return new Response(null, { status: 302, headers: upstream.headers });
     }
