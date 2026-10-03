@@ -8,13 +8,13 @@
     "nodejs_compat",
     "global_fetch_strictly_public"
   ],
-  "workers_dev": true,
+  "workers_dev": false,
   "preview_urls": false,
   "build": {
     "command": "node scripts/bundle-context.js"
   },
   "vars": {
-    "PUBLIC_ORIGIN": "https://centrisec-linkedin-agent.centrisec-com.workers.dev",
+    "PUBLIC_ORIGIN": "https://linkedin-agent.centrisec.com",
     "LINKEDIN_CLIENT_ID": "78jubwukgtzsb1",
     "LINKEDIN_VERSION": "202609",
     "LINKEDIN_WRITE_ENABLED": "false"
@@ -27,5 +27,11 @@
   ],
   "observability": {
     "enabled": false
-  }
+  },
+  "routes": [
+    {
+      "pattern": "linkedin-agent.centrisec.com",
+      "custom_domain": true
+    }
+  ]
 }

@@ -1,7 +1,12 @@
 # Cloudflare deployment
-Live origin: https://centrisec-linkedin-agent.centrisec-com.workers.dev
-LinkedIn redirect: https://centrisec-linkedin-agent.centrisec-com.workers.dev/oauth/linkedin/callback
-ChatGPT/Codex Streamable HTTP MCP: https://centrisec-linkedin-agent.centrisec-com.workers.dev/mcp
+Live origin: https://linkedin-agent.centrisec.com
+LinkedIn redirect: https://linkedin-agent.centrisec.com/oauth/linkedin/callback
+ChatGPT/Codex Streamable HTTP MCP: https://linkedin-agent.centrisec.com/mcp
+
+## Custom domain
+The Worker uses linkedin-agent.centrisec.com as its canonical OAuth origin. Wrangler manages the custom domain DNS and certificate. The workers.dev endpoint and preview URLs are disabled.
+
+When migrating an existing connection, add the new LinkedIn redirect URL above and recreate the MCP connection using the new URL; restart authorization rather than reusing an authorization page opened on the previous hostname.
 
 ## Account setup
 1. Add the exact HTTPS redirect in the LinkedIn app Auth tab.
