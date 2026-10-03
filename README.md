@@ -1,5 +1,21 @@
 # The LinkedIn agent skill
 
+## This fork: ChatGPT LinkedIn Agent local V1
+
+The protected Cloudflare adapter is now available: [Workers setup](docs/WORKERS_SETUP.md). It adds MCP OAuth/PKCE, owner-only consent, official LinkedIn OAuth callback and encrypted token props. The original local Node server remains loopback-only. Remote writes remain disabled until account linking and explicit review.
+
+This fork of Jakeschincariol/linkedin-agent-skill preserves all eleven original skills and adds Gadu Abdul/Centrisec context plus a narrow, approval-gated LinkedIn MCP action layer. Codex builds the agent; ChatGPT is the intended everyday interface after protected account linking and remote connectivity.
+
+Node 22.13+: run `npm install`, `npm test`, `npm run lint`, then `npm run dev`. No LinkedIn credentials are needed to start. Health: `http://127.0.0.1:8787/health`; Streamable HTTP MCP: `http://127.0.0.1:8787/mcp`.
+
+Tools: configuration status, personal text publishing, comments, replies, reactions, and reaction removal. Every write requires both `LINKEDIN_WRITE_ENABLED=true` and `approved:true`. Writes default off. No real LinkedIn calls occur in tests. Token validity is not checked by configuration status.
+
+Read [architecture](docs/ARCHITECTURE.md), [setup and permission requirements](docs/CHATGPT_SETUP.md), and [roadmap](docs/ROADMAP.md). Original skills and brand context are available as fixed MCP resources; clients must load them before drafting. This local-only server is not a production authenticated remote connector.
+
+The original manual-posting contract remains below. The personal API restriction statement in its fine print is corrected by this fork: Share on LinkedIn grants `w_member_social`; current comments/reactions require separately approved Community Management access and `w_member_social_feed`. No scraping or browser automation is used.
+
+## Original project documentation
+
 Eleven Claude skills that run a LinkedIn account. Free, MIT, no signup, no API
 key, nothing to connect.
 
