@@ -1,4 +1,8 @@
 # Local V1 architecture
+
+## Cloudflare extension
+
+The original local foundation below is preserved. worker/index.js now serves a protected remote MCP endpoint through Cloudflare's OAuth provider; worker/application.js owns consent, official member OAuth and the Web Standards transport. The build bundles fixed context documents from their original paths. See WORKERS_SETUP.md for live URLs, owner linking and encrypted grant storage. Public connectivity and account-linking routes are implemented; actual member consent is still pending.
 ## Flow
 User → ChatGPT → original content skills + Abdul context → MCP → approval gates → LinkedIn client → official LinkedIn API.
 Codex builds and tests the agent. ChatGPT is the intended everyday interface after protected remote integration.

@@ -1,4 +1,6 @@
 # Local setup and eventual ChatGPT connection
+
+For the deployed protected endpoint and exact HTTPS LinkedIn callback, follow [Workers setup](WORKERS_SETUP.md). The local-only instructions below describe the original foundation; do not expose the Node server publicly.
 ## Local foundation — no credentials needed
 Use Node 22.13+:
 1. npm install

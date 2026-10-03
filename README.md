@@ -2,6 +2,8 @@
 
 ## This fork: ChatGPT LinkedIn Agent local V1
 
+The protected Cloudflare adapter is now available: [Workers setup](docs/WORKERS_SETUP.md). It adds MCP OAuth/PKCE, owner-only consent, official LinkedIn OAuth callback and encrypted token props. The original local Node server remains loopback-only. Remote writes remain disabled until account linking and explicit review.
+
 This fork of Jakeschincariol/linkedin-agent-skill preserves all eleven original skills and adds Gadu Abdul/Centrisec context plus a narrow, approval-gated LinkedIn MCP action layer. Codex builds the agent; ChatGPT is the intended everyday interface after protected account linking and remote connectivity.
 
 Node 22.13+: run `npm install`, `npm test`, `npm run lint`, then `npm run dev`. No LinkedIn credentials are needed to start. Health: `http://127.0.0.1:8787/health`; Streamable HTTP MCP: `http://127.0.0.1:8787/mcp`.
