@@ -31,13 +31,17 @@ test('consent page escapes client name and requires owner key', async () => {
   const body = await response.text();
   assert.ok(!body.includes('<script>bad</script>')); assert.ok(body.includes('Owner setup key'));
   assert.ok(body.includes('client.example')); assert.equal(response.headers.get('x-frame-options'), 'DENY');
+  assert.equal(response.headers.get('referrer-policy'), 'same-origin');
 });
 test('unrecognized MCP permissions refused before consent', async () => {
   const oauth = { parseAuthRequest: async () => ({ scope: ['admin:all'] }), describeConsent: async () => ({}) };
   assert.equal((await defaultHandler(request('/authorize'), { ...env, OAUTH_PROVIDER: oauth }, {})).status, 400);
 });
 test('cross-origin consent cannot submit', async () => {
-  assert.equal((await defaultHandler(request('/authorize', { method: 'POST', headers: { origin: 'https://evil.example' }, body: new URLSearchParams({}) }), env, {})).status, 403);
+  for (const suppliedOrigin of ['https://evil.example', 'null', null]) {
+    const headers = suppliedOrigin === null ? {} : { origin: suppliedOrigin };
+    assert.equal((await defaultHandler(request('/authorize', { method: 'POST', headers, body: new URLSearchParams({}) }), env, {})).status, 403);
+  }
 });
 test('wrong owner key cannot start LinkedIn OAuth', async () => {
   let called = false;

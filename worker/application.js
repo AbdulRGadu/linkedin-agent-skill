@@ -54,6 +54,9 @@ export async function defaultHandler(request, env, ctx, fetchImpl = fetch) {
       const consent = await oauth.beginConsent(auth);
       const headers = new Headers(consent.headers);
       for (const [key, value] of Object.entries(securityHeaders)) headers.set(key, value);
+      // no-referrer can produce Origin: null on browser form POSTs. Preserve
+      // same-origin submissions without disclosing OAuth URLs to other sites.
+      headers.set('Referrer-Policy', 'same-origin');
       const content = '<p>Allow <strong>' + escape(details.clientName) + '</strong> to use your LinkedIn action tools?</p><p>Access returns to <strong>' + escape(details.redirectHost) + '</strong>.</p><p>' + (details.clientDomain ? 'Client domain: ' + escape(details.clientDomain) : 'This client name is self-reported.') + '</p><p>Requested access: ' + escape(auth.scope.join(', ')) + '. Actual LinkedIn writes also require your explicit approval and an enabled server write toggle.</p><form method="post"><input type="hidden" name="handle" value="' + escape(consent.handle) + '"><label>Owner setup key <input type="password" name="ownerKey" autocomplete="off" required></label><p><button name="decision" value="approve">Allow and connect LinkedIn</button> <button name="decision" value="deny" formnovalidate>Deny</button></p></form>';
       return new Response(page('Authorize LinkedIn Agent', content).body, { headers });
     }

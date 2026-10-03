@@ -27,6 +27,19 @@ test('workerd OAuth discovery, registration, consent and protected MCP smoke', a
   assert.equal(consent.status, 200);
   const body = await consent.text(); assert.ok(body.includes('Smoke test client')); assert.ok(body.includes('Owner setup key'));
   assert.ok(consent.headers.get('set-cookie').includes('HttpOnly'));
+  assert.equal(consent.headers.get('referrer-policy'), 'same-origin');
+  const cookie = consent.headers.getSetCookie().map(value => value.split(';')[0]).join('; ');
+  const handle = body.match(/name="handle" value="([^"]+)"/)[1];
+  const approved = await mf.dispatchFetch(origin + '/authorize', {
+    method: 'POST', redirect: 'manual', headers: { Origin: origin, Cookie: cookie },
+    body: new URLSearchParams({ handle, decision: 'approve', ownerKey: 'owner-key-for-test-only-32-chars-long' }),
+  });
+  assert.equal(approved.status, 302);
+  const upstream = new URL(approved.headers.get('location'));
+  assert.equal(upstream.origin, 'https://www.linkedin.com');
+  assert.equal(upstream.pathname, '/oauth/v2/authorization');
+  assert.equal(upstream.searchParams.get('redirect_uri'), origin + '/oauth/linkedin/callback');
+  assert.ok(upstream.searchParams.get('state'));
   const callback = await mf.dispatchFetch(origin + '/oauth/linkedin/callback?code=mock&state=wrong');
   assert.equal(callback.status, 400);
 });
