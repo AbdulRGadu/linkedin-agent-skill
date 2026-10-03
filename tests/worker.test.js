@@ -121,3 +121,19 @@ test('successful callback namespaces member identity safely for the OAuth provid
   assert.equal(completed.props.personUrn, 'urn:li:person:member123');
   assert.equal(response.headers.get('location'), 'https://client.example/callback?code=mock-mcp-code');
 });
+
+test('callback reports fixed safe failure stages without leaking errors', async () => {
+  const secret = 'private-upstream-secret';
+  const cases = [
+    { oauth: { finishUpstream: async () => { throw new Error(secret); } }, fetch: async () => { throw new Error('must not call'); }, expected: 'Validating browser session' },
+    { oauth: { finishUpstream: async () => ({ data: { owner: true } }) }, fetch: async () => Response.json({ error: 'invalid_client', error_description: secret }, { status: 401 }), expected: 'invalid_client' },
+    { oauth: { finishUpstream: async () => ({ data: { owner: true } }) }, fetch: async url => url.includes('accessToken') ? Response.json({ access_token: secret, expires_in: 3600 }) : new Response(secret, { status: 403 }), expected: 'profile lookup failed' },
+    { oauth: { finishUpstream: async () => ({ data: { owner: true }, request: { scope: [] } }), completeAuthorization: async () => { throw new Error(secret); } }, fetch: async url => Response.json(url.includes('accessToken') ? { access_token: secret, expires_in: 3600 } : { sub: 'member123' }), expected: 'Completing ChatGPT authorization' },
+  ];
+  for (const scenario of cases) {
+    const response = await defaultHandler(request('/oauth/linkedin/callback?code=private-code&state=private-state'), { ...env, OAUTH_PROVIDER: scenario.oauth }, {}, scenario.fetch);
+    const text = await response.text();
+    assert.equal(response.status, 400); assert.ok(text.includes(scenario.expected));
+    for (const value of [secret, 'private-code', 'private-state']) assert.ok(!text.includes(value));
+  }
+});

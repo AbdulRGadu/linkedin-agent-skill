@@ -29,7 +29,8 @@ export function createLinkedInClient({ config = getLinkedInConfig(), fetchImpl =
     let response;
     try {
       response = await fetchImpl('https://api.linkedin.com' + path, {
-        method, redirect: 'error', signal: AbortSignal.timeout(15000),
+        // Workers supports manual redirects; all non-2xx responses fail below.
+        method, redirect: 'manual', signal: AbortSignal.timeout(15000),
         headers: { Authorization: 'Bearer ' + config.accessToken, 'Linkedin-Version': config.version, 'X-Restli-Protocol-Version': '2.0.0', ...(payload ? { 'Content-Type': 'application/json' } : {}) },
         ...(payload ? { body: JSON.stringify(payload) } : {}),
       });

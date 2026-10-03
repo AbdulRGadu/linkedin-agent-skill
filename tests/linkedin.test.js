@@ -77,7 +77,7 @@ test('mock post uses exact approved text, author and required headers', async ()
   assert.equal(payload.visibility, 'PUBLIC'); assert.equal(payload.distribution.feedDistribution, 'MAIN_FEED');
   assert.equal(init.headers['Linkedin-Version'], '202609');
   assert.equal(init.headers['X-Restli-Protocol-Version'], '2.0.0');
-  assert.equal(init.redirect, 'error'); assert.ok(init.signal);
+  assert.equal(init.redirect, 'manual'); assert.ok(init.signal);
 });
 test('mock comment has encoded target and actor', async () => {
   const { client, calls } = fixture();
@@ -115,7 +115,7 @@ test('mock comment reaction and removal encode composite identifier', async () =
   assert.equal(calls[1][1].method, 'DELETE'); assert.equal(calls[1][1].body, undefined);
   assert.equal(calls[1][0], 'https://api.linkedin.com/rest/reactions/(actor:urn%3Ali%3Aperson%3Aabc123,entity:urn%3Ali%3Acomment%3A%28urn%3Ali%3Aactivity%3A123%2C456%29)');
 });
-for (const status of [400, 401, 403, 429, 500]) test('safe failed post HTTP ' + status, async () => {
+for (const status of [301, 302, 307, 400, 401, 403, 429, 500]) test('safe failed post HTTP ' + status, async () => {
   const { client } = fixture({}, () => new Response(config.accessToken, { status, statusText: config.accessToken }));
   await assert.rejects(client.execute('linkedin_publish_text_post', inputs.linkedin_publish_text_post), error => {
     assert.ok(error.message.includes('HTTP ' + status));

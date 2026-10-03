@@ -6,6 +6,7 @@ import { registerLinkedInTools } from '../apps/linkedin/tools.js';
 import resources from './context.generated.js';
 
 const escape = value => String(value).replace(/[&<>"']/g, char => '&#' + char.charCodeAt(0) + ';');
+class SetupFailure extends Error {}
 const securityHeaders = {
   'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store',
   'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
@@ -22,21 +23,32 @@ export async function matchesOwnerKey(value, expected) {
   return a.reduce((diff, byte, index) => diff | (byte ^ b[index]), 0) === 0;
 }
 export async function exchangeLinkedInCode(code, env, fetchImpl = fetch) {
-  if (typeof code !== 'string' || !code || code.length > 4096) throw new Error('Invalid authorization code');
+  if (typeof code !== 'string' || !code || code.length > 4096) throw new SetupFailure('LinkedIn did not return a valid authorization code. Restart authorization from ChatGPT.');
   const response = await fetchImpl('https://www.linkedin.com/oauth/v2/accessToken', {
-    method: 'POST', redirect: 'error', signal: AbortSignal.timeout(15000),
+    method: 'POST', redirect: 'manual', signal: AbortSignal.timeout(15000),
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ grant_type: 'authorization_code', code, redirect_uri: env.PUBLIC_ORIGIN + '/oauth/linkedin/callback', client_id: env.LINKEDIN_CLIENT_ID, client_secret: env.LINKEDIN_CLIENT_SECRET }),
   });
-  if (!response.ok) throw new Error('LinkedIn authorization failed. Check the app products and exact redirect URL.');
+  if (!response.ok) {
+    let error;
+    try { error = (await response.json()).error; } catch { /* Never reflect raw upstream responses. */ }
+    const reasons = new Map([
+      ['invalid_client', 'LinkedIn rejected the app credentials (invalid_client). The Worker client ID and client secret must belong to the same LinkedIn app.'],
+      ['invalid_client_id', 'LinkedIn rejected the app client ID (invalid_client_id). Check the Worker client ID matches your LinkedIn app.'],
+      ['invalid_client_secret', 'LinkedIn rejected the app secret (invalid_client_secret). Update the Worker secret from the matching LinkedIn app.'],
+      ['invalid_redirect_uri', 'LinkedIn rejected the callback URL during token exchange (invalid_redirect_uri). Verify the exact authorized redirect URL.'],
+      ['invalid_grant', 'LinkedIn rejected the authorization code (invalid_grant). It may be expired or already used. Restart from ChatGPT without refreshing the callback page.'],
+    ]);
+    throw new SetupFailure(reasons.get(error) || 'LinkedIn token exchange failed. Check the matching app credentials and exact redirect URL, then restart authorization.');
+  }
   const token = await response.json();
-  if (typeof token.access_token !== 'string' || !token.access_token || !Number.isFinite(token.expires_in) || token.expires_in <= 0) throw new Error('LinkedIn returned invalid token configuration.');
+  if (typeof token.access_token !== 'string' || !token.access_token || !Number.isFinite(token.expires_in) || token.expires_in <= 0) throw new SetupFailure('LinkedIn returned invalid token configuration.');
   const identityResponse = await fetchImpl('https://api.linkedin.com/v2/userinfo', {
-    headers: { Authorization: 'Bearer ' + token.access_token }, redirect: 'error', signal: AbortSignal.timeout(15000),
+    headers: { Authorization: 'Bearer ' + token.access_token }, redirect: 'manual', signal: AbortSignal.timeout(15000),
   });
-  if (!identityResponse.ok) throw new Error('Identity lookup failed. Enable Sign In with LinkedIn using OpenID Connect and reauthorize.');
+  if (!identityResponse.ok) throw new SetupFailure('LinkedIn profile lookup failed after token exchange. Verify OpenID Connect is enabled and profile is granted, then reauthorize.');
   const identity = await identityResponse.json();
-  if (typeof identity.sub !== 'string' || !/^[A-Za-z0-9_-]+$/.test(identity.sub)) throw new Error('LinkedIn returned invalid member identity.');
+  if (typeof identity.sub !== 'string' || !/^[A-Za-z0-9_-]+$/.test(identity.sub)) throw new SetupFailure('LinkedIn returned invalid member identity.');
   return { accessToken: token.access_token, personUrn: 'urn:li:person:' + identity.sub, expiresAt: Date.now() + token.expires_in * 1000, owner: true };
 }
 export async function defaultHandler(request, env, ctx, fetchImpl = fetch) {
@@ -45,6 +57,7 @@ export async function defaultHandler(request, env, ctx, fetchImpl = fetch) {
   if (url.pathname === '/') return page('LinkedIn Agent', '<p>Protected MCP endpoint: <code>/mcp</code></p><p>LinkedIn callback: <code>' + escape(env.PUBLIC_ORIGIN) + '/oauth/linkedin/callback</code></p><p>Add the callback in your LinkedIn app. Enable Share on LinkedIn and Sign In with LinkedIn using OpenID Connect. Then connect ChatGPT to this server using OAuth.</p><p>Writes remain disabled during setup. Your private owner setup key is stored locally in .env.</p>');
   if (!['/authorize', '/oauth/linkedin/callback'].includes(url.pathname)) return page('Not found', '<p>Unknown route.</p>', 404);
   if (!env.LINKEDIN_CLIENT_ID || !env.LINKEDIN_CLIENT_SECRET || !env.OWNER_SETUP_KEY) return page('Setup incomplete', '<p>The server needs its LinkedIn app credentials and owner setup key.</p>', 503);
+  let stage = 'Starting authorization';
   try {
     const oauth = env.OAUTH_PROVIDER;
     if (url.pathname === '/authorize' && request.method === 'GET') {
@@ -79,6 +92,7 @@ export async function defaultHandler(request, env, ctx, fetchImpl = fetch) {
     }
     if (url.pathname === '/oauth/linkedin/callback' && request.method === 'GET') {
       // Library consumes encrypted state and validates its browser-bound cookie.
+      stage = 'Validating browser session';
       const upstream = await oauth.finishUpstream(request);
       if (upstream.data?.owner !== true) return page('Authorization session invalid', '<p>Restart authorization from your MCP client in the same browser.</p>', 400);
       if (url.searchParams.has('error')) {
@@ -100,15 +114,22 @@ export async function defaultHandler(request, env, ctx, fetchImpl = fetch) {
         const reason = reasons.get(error) || 'LinkedIn returned an unrecognized authorization error. Check the app products and redirect URL, then restart authorization.';
         return page('LinkedIn authorization refused', '<p>' + reason + '</p>' + (reasons.has(error) ? '<p>Error: <code>' + escape(error) + '</code></p>' : '') + '<p>Required redirect URL: <code>' + escape(env.PUBLIC_ORIGIN) + '/oauth/linkedin/callback</code></p>', 400);
       }
+      stage = 'Exchanging LinkedIn code and looking up profile';
       const props = await exchangeLinkedInCode(url.searchParams.get('code'), env, fetchImpl);
+      stage = 'Completing ChatGPT authorization';
       const completed = await oauth.completeAuthorization({ request: upstream.request, userId: encodeURIComponent(props.personUrn), metadata: { label: 'Gadu Abdul LinkedIn' }, scope: upstream.request.scope, props });
       upstream.headers.set('Location', completed.redirectTo);
       return new Response(null, { status: 302, headers: upstream.headers });
     }
     return page('Method not allowed', '<p>Unsupported request method.</p>', 405);
-  } catch {
+  } catch (error) {
     // Never serialize provider errors, authorization codes, tokens, or URLs.
-    return page('Authorization could not complete', '<p>Restart from your MCP client. Check LinkedIn products, redirect URL, and owner setup key. No credentials were displayed.</p>', 400);
+    const advice = error instanceof SetupFailure ? error.message : stage === 'Validating browser session'
+      ? 'This authorization session expired, was already used, or was started in another browser. Start again from ChatGPT and finish in the same browser without refreshing the callback.'
+      : stage === 'Completing ChatGPT authorization'
+        ? 'LinkedIn sign-in and profile lookup succeeded, but the MCP grant could not be created. Restart the ChatGPT connection; report this stage if it repeats.'
+        : 'Restart from ChatGPT. Check the app configuration and complete authorization in the same browser.';
+    return page('Authorization could not complete', '<p>Step: <strong>' + stage + '</strong></p><p>' + escape(advice) + '</p><p>No credentials were displayed.</p>', 400);
   }
 }
 export async function mcpHandler(request, env, ctx) {

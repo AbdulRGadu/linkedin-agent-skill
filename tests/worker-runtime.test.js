@@ -5,6 +5,11 @@ import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
 test('workerd OAuth discovery, registration, consent and protected MCP smoke', async t => {
   const origin = 'https://agent.example';
   const mf = new Miniflare(convertV4MiniflareOptions({ name: 'test-agent', modules: true, scriptPath: '.wrangler/test-bundle/index.js', compatibilityDate: '2026-10-03', compatibilityFlags: ['nodejs_compat', 'global_fetch_strictly_public'], kvNamespaces: ['OAUTH_KV'],
+    outboundService: async request => {
+      if (request.url === 'https://www.linkedin.com/oauth/v2/accessToken') return Response.json({ access_token: 'mock-private-member-token', expires_in: 3600 });
+      if (request.url === 'https://api.linkedin.com/v2/userinfo') return Response.json({ sub: 'mock_member123' });
+      throw new Error('Unexpected outbound request; live network is forbidden in tests');
+    },
     bindings: { PUBLIC_ORIGIN: origin, LINKEDIN_CLIENT_ID: 'mock-app', LINKEDIN_CLIENT_SECRET: 'mock-secret', OWNER_SETUP_KEY: 'owner-key-for-test-only-32-chars-long', LINKEDIN_WRITE_ENABLED: 'false' } }));
   t.after(() => mf.dispose());
   const health = await mf.dispatchFetch(origin + '/health'); assert.equal(health.status, 200);
@@ -48,6 +53,25 @@ test('workerd OAuth discovery, registration, consent and protected MCP smoke', a
   const refusalText = await refused.text();
   assert.ok(refusalText.includes('unauthorized_scope_error'));
   assert.ok(!refusalText.includes('private-value-must-not-appear'));
+  // Exercise successful completion with the real provider and mocked LinkedIn.
+  const freshConsent = await mf.dispatchFetch(authorizeUrl.toString());
+  const freshBody = await freshConsent.text();
+  const freshApproval = await mf.dispatchFetch(origin + '/authorize', {
+    method: 'POST', redirect: 'manual',
+    headers: { Origin: origin, Cookie: freshConsent.headers.getSetCookie().map(value => value.split(';')[0]).join('; ') },
+    body: new URLSearchParams({ handle: freshBody.match(/name="handle" value="([^"]+)"/)[1], decision: 'approve', ownerKey: 'owner-key-for-test-only-32-chars-long' }),
+  });
+  assert.equal(freshApproval.status, 302);
+  const freshUpstream = new URL(freshApproval.headers.get('location'));
+  const completedUrl = new URL(origin + '/oauth/linkedin/callback');
+  completedUrl.search = new URLSearchParams({ state: freshUpstream.searchParams.get('state'), code: 'mock-linkedin-code' }).toString();
+  const completed = await mf.dispatchFetch(completedUrl.toString(), { redirect: 'manual', headers: { Cookie: freshApproval.headers.getSetCookie().map(value => value.split(';')[0]).join('; ') } });
+  assert.equal(completed.status, 302, await completed.text());
+  const returnedTo = new URL(completed.headers.get('location'));
+  assert.equal(returnedTo.origin, 'https://client.example');
+  assert.ok(returnedTo.searchParams.get('code'));
+  assert.equal(returnedTo.searchParams.get('state'), 'test-state');
+  assert.ok(!returnedTo.href.includes('mock-private-member-token'));
   const callback = await mf.dispatchFetch(origin + '/oauth/linkedin/callback?code=mock&state=wrong');
   assert.equal(callback.status, 400);
 });
