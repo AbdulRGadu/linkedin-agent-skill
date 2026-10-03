@@ -10,5 +10,5 @@ function check(directory) {
     }
   }
 }
-for (const directory of ['apps', 'server', 'scripts', 'tests']) check(directory);
+for (const directory of ['apps', 'server', 'worker', 'scripts', 'tests']) check(directory);
 console.log('JavaScript syntax checks passed.');

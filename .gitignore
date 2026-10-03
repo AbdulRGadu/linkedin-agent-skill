@@ -15,3 +15,9 @@ storage/logs/*
 !storage/ideas/.gitkeep
 !storage/plans/.gitkeep
 !storage/logs/.gitkeep
+.wrangler/
+.dev.vars
+.dev.vars.*
+worker/context.generated.js
+worker-configuration.d.ts
+secrets*.txt*

@@ -10,10 +10,19 @@
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
     "test": "node --test",
-    "lint": "node scripts/check.js"
+    "lint": "node scripts/check.js",
+    "build": "wrangler deploy --dry-run --outdir .wrangler/test-bundle",
+    "pretest": "npm run build",
+    "dev:worker": "wrangler dev",
+    "deploy": "wrangler deploy"
   },
   "dependencies": {
+    "@cloudflare/workers-oauth-provider": "^1.2.1",
     "@modelcontextprotocol/sdk": "^1.31.0",
     "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "miniflare": "^5.20261001.0-alpha",
+    "wrangler": "^4.147.0"
   }
 }
