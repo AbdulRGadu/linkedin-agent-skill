@@ -54,7 +54,7 @@ export async function exchangeLinkedInCode(code, env, fetchImpl = fetch) {
 export async function defaultHandler(request, env, ctx, fetchImpl = fetch) {
   const url = new URL(request.url);
   if (url.pathname === '/health') return Response.json({ status: 'ok', service: 'linkedin-agent', writesEnabled: env.LINKEDIN_WRITE_ENABLED === 'true' }, { headers: { 'Cache-Control': 'no-store' } });
-  if (url.pathname === '/') return page('LinkedIn Agent', '<p>Protected MCP endpoint: <code>/mcp</code></p><p>LinkedIn callback: <code>' + escape(env.PUBLIC_ORIGIN) + '/oauth/linkedin/callback</code></p><p>Add the callback in your LinkedIn app. Enable Share on LinkedIn and Sign In with LinkedIn using OpenID Connect. Then connect ChatGPT to this server using OAuth.</p><p>Writes remain disabled during setup. Your private owner setup key is stored locally in .env.</p>');
+  if (url.pathname === '/') return page('LinkedIn Agent', '<p>Protected MCP endpoint: <code>/mcp</code></p><p>LinkedIn callback: <code>' + escape(env.PUBLIC_ORIGIN) + '/oauth/linkedin/callback</code></p><p>Add the callback in your LinkedIn app. Enable Share on LinkedIn and Sign In with LinkedIn using OpenID Connect. Then connect ChatGPT to this server using OAuth.</p><p>Each write requires explicit approval of the exact action. Your private owner setup key is stored locally in .env.</p>');
   if (!['/authorize', '/oauth/linkedin/callback'].includes(url.pathname)) return page('Not found', '<p>Unknown route.</p>', 404);
   if (!env.LINKEDIN_CLIENT_ID || !env.LINKEDIN_CLIENT_SECRET || !env.OWNER_SETUP_KEY) return page('Setup incomplete', '<p>The server needs its LinkedIn app credentials and owner setup key.</p>', 503);
   let stage = 'Starting authorization';

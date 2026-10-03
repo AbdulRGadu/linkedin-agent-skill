@@ -15,7 +15,7 @@ When migrating an existing connection, add the new LinkedIn redirect URL above a
 4. On the authorization page, read the client name, redirect host and requested access. Enter the private OWNER_SETUP_KEY from your ignored local .env and approve only the client you initiated.
 5. Complete LinkedIn consent yourself. No username/password is read by this agent. The callback validates the browser-bound state, exchanges the code, and resolves the member via userinfo.
 
-Writes remain disabled in deployment config. Enable them only after account linking and a separate review; approved:true is still required for every action. This pass sends no live LinkedIn requests.
+Writes are enabled in the deployed Worker following owner authorization and account linking. approved:true is still required for every exact action; enabling the toggle does not publish any content. New installations retain the disabled default in .env.example. Deployment checks do not send live LinkedIn requests.
 
 ## Deployment/runtime
 npm install

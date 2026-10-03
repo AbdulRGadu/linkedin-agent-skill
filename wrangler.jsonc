@@ -17,7 +17,7 @@
     "PUBLIC_ORIGIN": "https://linkedin-agent.centrisec.com",
     "LINKEDIN_CLIENT_ID": "78jubwukgtzsb1",
     "LINKEDIN_VERSION": "202609",
-    "LINKEDIN_WRITE_ENABLED": "false"
+    "LINKEDIN_WRITE_ENABLED": "true"
   },
   "kv_namespaces": [
     {
