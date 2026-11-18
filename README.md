@@ -1,5 +1,25 @@
 # The LinkedIn agent skill
 
+## This fork: ChatGPT LinkedIn Agent local V1
+
+The protected Cloudflare adapter is now available: [Workers setup](docs/WORKERS_SETUP.md). It adds MCP OAuth/PKCE, owner-only consent, official LinkedIn OAuth callback and encrypted token props. The original local Node server remains loopback-only. Writes depend on the deployment toggle, owner linking, actual permissions and explicit approval.
+
+This fork of Jakeschincariol/linkedin-agent-skill preserves all eleven original skills and adds Gadu Abdul/Centrisec context plus a narrow, approval-gated LinkedIn MCP action layer. Codex builds the agent; ChatGPT is the intended everyday interface after protected account linking and remote connectivity.
+
+Node 22.13+: run `npm install`, `npm test`, `npm run lint`, then `npm run dev`. No LinkedIn credentials are needed to start. Health: `http://127.0.0.1:8787/health`; Streamable HTTP MCP: `http://127.0.0.1:8787/mcp`.
+
+Tools: verified capabilities, managed-page discovery, actor/URL resolution, text/link posts, comments/replies/reactions, ownership-checked edits/deletes and permitted known-content reads. Page actions use current authorization; no company IDs are hard-coded. Every write requires both `LINKEDIN_WRITE_ENABLED=true` and `approved:true`. Writes default off. No real LinkedIn calls occur in tests. Token validity is not checked by configuration status.
+
+The Cloudflare Worker also supports approved personal and managed-page text scheduling: single/batch scheduling, listing, cancellation, rescheduling and scheduler status. One approval of seven exact posts, actors and the daily FIFO cadence authorizes automatic publication through D1 and cron. See [the ChatGPT scheduling workflow](docs/CHATGPT_SETUP.md#scheduled-personal-posts-cloudflare-worker) and [scheduler setup](docs/WORKERS_SETUP.md#scheduler-setup). The loopback server uses the shared social/read client; scheduling remains Cloudflare-only.
+
+Optional two-app linking keeps the personal OAuth app and a separate Community Management app. Managed-page actions use the second app without requiring its own OIDC/Share products; only verified eligible scopes activate it. See [two-app setup](docs/WORKERS_SETUP.md#separate-community-management-app-implemented-not-deployed).
+
+Read [architecture](docs/ARCHITECTURE.md), [setup and permission requirements](docs/CHATGPT_SETUP.md), and [roadmap](docs/ROADMAP.md). Original skills and brand context are available as fixed MCP resources; clients must load them before drafting. The Node server remains loopback-only; the protected Worker is the remote connector.
+
+The original manual-posting contract remains below. The personal API restriction statement in its fine print is corrected by this fork: Share on LinkedIn grants `w_member_social`; current comments/reactions require separately approved Community Management access and `w_member_social_feed`. No scraping or browser automation is used.
+
+## Original project documentation
+
 Eleven Claude skills that run a LinkedIn account. Free, MIT, no signup, no API
 key, nothing to connect.
 

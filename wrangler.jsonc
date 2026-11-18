@@ -1,0 +1,50 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "centrisec-linkedin-agent",
+  "main": "worker/index.js",
+  "account_id": "c042400a63d2d3d81042613f4abef9c1",
+  "compatibility_date": "2026-10-03",
+  "compatibility_flags": [
+    "nodejs_compat",
+    "global_fetch_strictly_public"
+  ],
+  "workers_dev": false,
+  "preview_urls": false,
+  "build": {
+    "command": "node scripts/bundle-context.js"
+  },
+  "vars": {
+    "PUBLIC_ORIGIN": "https://linkedin-agent.centrisec.com",
+    "LINKEDIN_CLIENT_ID": "78jubwukgtzsb1",
+    "LINKEDIN_VERSION": "202609",
+    "LINKEDIN_WRITE_ENABLED": "true",
+    "LINKEDIN_OPTIONAL_SCOPES": "",
+    "LINKEDIN_COMMUNITY_CLIENT_ID": "",
+    "LINKEDIN_COMMUNITY_SCOPES": "",
+    "FIFO_START_AT": "2026-11-19T07:00:00Z"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "OAUTH_KV",
+      "id": "a82d6b72bf564e8a9f07ab3347808321"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  },
+  "d1_databases": [
+    {
+      "binding": "SCHEDULER_DB",
+      "database_name": "centrisec-linkedin-scheduler",
+      "database_id": "108b1544-073f-4f27-b082-f170b68e95e3",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "triggers": { "crons": ["*/15 7-22 * * *"] },
+  "routes": [
+    {
+      "pattern": "linkedin-agent.centrisec.com",
+      "custom_domain": true
+    }
+  ]
+}
