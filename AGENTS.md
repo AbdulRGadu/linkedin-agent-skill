@@ -19,7 +19,7 @@ Local server binding must remain loopback until protected remote deployment is i
 3. Use `brand/centrisec/` for company/product facts, not as permission to make unsupported claims.
 4. Never invent metrics, clients, outcomes, quotes, certifications, partnerships, or product capabilities.
 5. Draft first. Humanize before presenting final social copy.
-6. Never invoke a LinkedIn write action unless the user explicitly approves the exact post/comment/reply/reaction.
+6. Never invoke a LinkedIn write action unless the user explicitly approves the exact post/comment/reply/reaction. Scheduling approval must cover exact text, resolved personal or organization actor and daily FIFO cadence, plus any earliest eligible time; persisted scheduling approval authorizes cron publishing without a second approval. Rescheduling requires approval of the new time for the existing exact text/target.
 7. Never place access tokens, client secrets, refresh tokens, or credentials in Git.
 8. Do not scrape LinkedIn or automate the LinkedIn website. Use documented APIs only.
 
@@ -32,10 +32,12 @@ Supported action tools:
 - nested comment replies
 - reactions
 - reaction removal
+- approved personal text scheduling (single/batch), listing, cancellation, rescheduling and scheduler status
+
+Supported expansion also includes managed-page discovery, capabilities, actor/URL resolution, authorized page publishing/social actions/reads/scheduling, ownership-checked edits/deletes and article/link posts. Page actions require current official authorization and verified grants.
 
 Not yet supported:
 - feed crawling
-- analytics ingestion
-- scheduling
+- analytics ingestion (basic engagement metadata on known objects is supported)
 - image/document upload
-- company-page publishing
+- messaging/invitations without partner access

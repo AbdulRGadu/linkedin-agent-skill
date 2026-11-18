@@ -85,13 +85,13 @@ test('worker MCP refuses invalid owner, scope and expiry', async () => {
     assert.ok([401, 403].includes((await mcpHandler(request('/mcp', { method: 'POST' }), env, ctx)).status));
   }
 });
-test('Worker-native MCP lists six tools and refuses approved write when toggle off', async () => {
+test('Worker-native MCP lists twelve tools and refuses approved write when toggle off', async () => {
   const ctx = { auth: { scope: ['linkedin:actions'] }, props: { owner: true, expiresAt: Date.now() + 3600000, accessToken: 'mock-private-token', personUrn: 'urn:li:person:member123' } };
   const rpc = async (method, params) => {
     const response = await mcpHandler(request('/mcp', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }) }), env, ctx);
     assert.equal(response.status, 200); return response.json();
   };
-  assert.equal((await rpc('tools/list', {})).result.tools.length, 6);
+  assert.equal((await rpc('tools/list', {})).result.tools.length, 27);
   assert.equal((await rpc('resources/list', {})).result.resources.length, 18);
   const result = await rpc('tools/call', { name: 'linkedin_publish_text_post', arguments: { text: 'Test draft', approved: true } });
   assert.equal(result.result.isError, true); assert.ok(!JSON.stringify(result).includes('mock-private-token'));

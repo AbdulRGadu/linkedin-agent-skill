@@ -9,7 +9,7 @@ import { createLinkedInClient, schemas, REACTIONS } from '../apps/linkedin/clien
 import { getLinkedInConfig } from '../apps/linkedin/config.js';
 import { createHttpServer } from '../server/index.js';
 
-const config = { accessToken: 'test-secret-never-real', personUrn: 'urn:li:person:abc123', version: '202609', writeEnabled: true };
+const config = { grantedScopes: ['w_member_social', 'w_member_social_feed'], accessToken: 'test-secret-never-real', personUrn: 'urn:li:person:abc123', version: '202609', writeEnabled: true };
 const inputs = {
   linkedin_publish_text_post: { text: 'Practical security lesson.', approved: true },
   linkedin_create_comment: { targetUrn: 'urn:li:share:123', text: 'A useful question.', approved: true },
